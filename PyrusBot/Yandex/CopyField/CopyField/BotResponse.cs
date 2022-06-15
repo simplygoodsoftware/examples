@@ -2,6 +2,9 @@
 
 namespace Bots.CopyFieldBot
 {
+	/// <summary>
+	/// Response from the bot.
+	/// </summary>
 	public class BotResponse
 	{
 			public int StatusCode { get; set; }

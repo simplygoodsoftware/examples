@@ -1,8 +1,34 @@
-﻿namespace Bots.CopyFieldBot
+﻿using System.Text.Json.Serialization;
+
+namespace Bots.CopyFieldBot
 {
-	public class BotRequest
+	/// <summary>
+	/// Http request from Pyrus to invoke bot execution.
+	/// </summary>
+	internal class BotRequest
 	{
-		public string Body { get; set; }
+		/// <summary>
+		/// Bearer token sent from Pyrus for subsequent bot requests.
+		/// </summary>
+		[JsonPropertyName("access_token")]
+		public string AccessToken { get; set; }
+
+		/// <summary>
+		/// Id of the task from which the bot was invoked.
+		/// </summary>
+		[JsonPropertyName("task_id")]
+		public string TaskId { get; set; }
+
+		/// <summary>
+		/// Id of the bot in Pyrus.
+		/// </summary>
+		[JsonPropertyName("user_id")]
+		public string UserId { get; set; }
+
+		/// <summary>
+		/// Content of the 'Settings' field from the bot profile.
+		/// </summary>
+		[JsonPropertyName("bot_settings")]
+		public string BotSettings { get; set; }
 	}
 }
-

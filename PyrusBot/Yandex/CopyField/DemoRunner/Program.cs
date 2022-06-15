@@ -1,6 +1,8 @@
 ﻿using Bots.CopyFieldBot;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -19,12 +21,27 @@ namespace DemoRunner
 				\""TargetFieldCode\"": \""u_Target\""
 			}";
 
-			var request = new BotRequest
+			// request to test locally because Yandex passes the request in the 'body' tag of the json file
+			var request = new Request
 			{
 				Body = $"{{ \"task_id\": \"123456789\", \"user_id\": \"123456\", \"access_token\": \"{token}\", \"bot_settings\": \"{RemoveNonPrintableChars(settings)}\" }}"
 			};
+			// request to test the bot deployed in Yandex
+			//var request = $"{{ \"task_id\": \"123456789\", \"user_id\": \"123456\", \"access_token\": \"{token}\", \"bot_settings\": \"{RemoveNonPrintableChars(settings)}\" }}";
 
-			function.FunctionHandler(JsonSerializer.Serialize(request));
+			var serializeOptions = new JsonSerializerOptions
+			{
+				PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+				WriteIndented = true
+			};
+
+			// call the bot locally
+			function.FunctionHandler(JsonSerializer.Serialize(request, serializeOptions));
+
+			// call the bot deployed in Yandex
+			//var client = new HttpClient();
+			//var content = new StringContent(JsonSerializer.Serialize(request, serializeOptions));
+			//await client.PostAsync("https://functions.yandexcloud.net/your_identificator", content);
 
 			Console.WriteLine("Done.");
 		}
@@ -32,7 +49,7 @@ namespace DemoRunner
 		private static async Task<string> GetToken(PyrusApiClient.PyrusClient client)
 		{
 			var response = await client.Auth(
-				"bot_logini",
+				"bot_login",
 				"security_key"
 			);
 

@@ -30,16 +30,19 @@ namespace Bots.CopyFieldBot
 		{
 			try
 			{
-				var request = JsonSerializer.Deserialize<BotRequest>(input)?.Body;
+				var request = JsonSerializer.Deserialize<Request>(input)?.Body;
 
 				var body = request.Contains("{")
 					? request
 					: System.Text.Encoding.Default.GetString(Convert.FromBase64String(request));
 
-				var requestParams = JsonSerializer.Deserialize<Dictionary<string, string>>(body);
+				// making some changes because Yandex modifies the request
+				// that prevents to correct deserialization
+				body = body.Trim('\"').Replace(@"\u0022", @"""").Replace(@"\\", @"\");
 
-				var info = $"Params: {JsonSerializer.Serialize(requestParams)}";
-				var mainTask = Task.Run(() => ParseAndRun(requestParams));
+				var botRequest = JsonSerializer.Deserialize<BotRequest>(body);
+
+				var mainTask = Task.Run(() => ParseAndRun(botRequest));
 				if (mainTask.Wait(YandexDefaultTimeSpan))
 				{
 					var response = new BotResponse
@@ -67,6 +70,8 @@ namespace Bots.CopyFieldBot
 					message = string.Join("\r\n", agr.InnerExceptions.Select(x => x.Message));
 				}
 
+				Console.WriteLine(message);
+
 				var errorResponse = new BotResponse
 				{
 					StatusCode = 500,
@@ -78,11 +83,11 @@ namespace Bots.CopyFieldBot
 		}
 
 		/// <summary>
-		/// Makes a JSON with CameCase.
+		/// Makes a JSON with CamelCase.
 		/// </summary>
 		/// <param name="src">Bot response to be serialized.</param>
 		/// <returns></returns>
-		string SerializeResponse(BotResponse src)
+		private string SerializeResponse(BotResponse src)
 		{
 			var serializeOptions = new JsonSerializerOptions
 			{
@@ -98,72 +103,31 @@ namespace Bots.CopyFieldBot
 		/// </summary>
 		/// <param name="request">API request to Yandex.</param>
 		/// <returns>Task object for async execution.</returns>
-		public async Task ParseAndRun(Dictionary<string, string> requestParameters)
+		private async Task ParseAndRun(BotRequest botRequest)
 		{
-			var parameters = ParseParams(requestParameters);
-
 			// create Pyrus API client for subsequent http requests
 			_apiClient = new PyrusClient
 			{
-				Token = parameters.Token
+				Token = botRequest.AccessToken
 			};
 
-			_task = ApiHelper.EnsureSuccess(await _apiClient.GetTask(parameters.TaskId)).Task;
+			if (!int.TryParse(botRequest.TaskId, out int taskId))
+				throw new Exception($"Failed to deserialize task id: '{botRequest.TaskId}'.");
+
+			_task = ApiHelper.EnsureSuccess(await _apiClient.GetTask(taskId)).Task;
 			if (_task == null)
-				throw new Exception($"Failed to get task '{parameters.TaskId}'.");
+				throw new Exception($"Failed to get task '{botRequest.TaskId}'.");
 
-			_botId = parameters.UserId;
+			if (!int.TryParse(botRequest.UserId, out _botId))
+				throw new Exception($"Failed to deserialize user id {botRequest.UserId}");
 
-			if (!string.IsNullOrWhiteSpace(parameters.BotSettings))
-				_settings = JsonSerializer.Deserialize<BotSettings>(parameters.BotSettings);
+			if (!string.IsNullOrWhiteSpace(botRequest.BotSettings))
+				_settings = JsonSerializer.Deserialize<BotSettings>(botRequest.BotSettings);
 
 			var result = await Execute();
 
 			if (result != null)
-				ApiHelper.EnsureSuccess(await _apiClient.CommentTask(parameters.TaskId, result));
-		}
-
-		/// <summary>
-		/// Parse parameters.
-		/// </summary>
-		/// <param name="requestParams">Bot parameters.</param>
-		/// <returns>Object with parameters.</returns>
-		private RequestParams ParseParams(IDictionary<string, string> requestParams)
-		{
-			var result = new RequestParams();
-
-			const string TaskIdParamName = "task_id";
-			const string BotSettingsParam = "bot_settings";
-			const string UserIdParam = "user_id";
-			const string TokenParamName = "access_token";
-
-			var parameters = new Dictionary<string, string>(
-				requestParams ?? throw new ArgumentNullException(nameof(requestParams)),
-				StringComparer.OrdinalIgnoreCase);
-
-			result.Token = parameters.TryGetValue(TokenParamName, out var token)
-				? token
-				: throw new ArgumentNullException("Auth token is not set.");
-
-			result.TaskId = parameters.TryGetValue(TaskIdParamName, out var tId)
-					? Int32.TryParse(tId, out var idConverted)
-						? idConverted
-						: throw new ArgumentException("Task id must be a numeric value.")
-					: throw new ArgumentNullException("TaskId");
-
-			if (parameters.TryGetValue(BotSettingsParam, out var botSettingsStr))
-			{
-				result.BotSettings = botSettingsStr;
-			}
-
-			if (parameters.TryGetValue(UserIdParam, out var userIdStr))
-			{
-				result.UserId = Int32.TryParse(userIdStr, out var uid)
-					? uid
-					: throw new ArgumentException("User Id must be a numeric value.");
-			}
-
-			return result;
+				ApiHelper.EnsureSuccess(await _apiClient.CommentTask(taskId, result));
 		}
 
 		/// <summary>

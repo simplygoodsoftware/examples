@@ -42,6 +42,7 @@ Go to the bot profile and enter bot settings in json format. Names of the json e
     "TargetFieldCode": "u_Target"
 }
 `
+
 ![Screenshot](images/bot_profile.png)
 
 4. Setup form workflow.

@@ -1,6 +1,7 @@
 ﻿using Bots.CopyFieldBot;
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace DemoRunner
@@ -18,11 +19,12 @@ namespace DemoRunner
 				\""TargetFieldCode\"": \""u_Target\""
 			}";
 
-			await function.ParseAndRun(new Amazon.Lambda.APIGatewayEvents.APIGatewayProxyRequest
+			var request = new BotRequest
 			{
-				// local target task
-				Body = $"{{ \"task_id\": 123456789, \"user_id\": 123456, \"access_token\": \"{token}\", \"bot_settings\": \"{RemoveNonPrintableChars(settings)}\" }}",
-			});
+				Body = $"{{ \"task_id\": \"123456789\", \"user_id\": \"123456\", \"access_token\": \"{token}\", \"bot_settings\": \"{RemoveNonPrintableChars(settings)}\" }}"
+			};
+
+			function.FunctionHandler(JsonSerializer.Serialize(request));
 
 			Console.WriteLine("Done.");
 		}
@@ -30,7 +32,7 @@ namespace DemoRunner
 		private static async Task<string> GetToken(PyrusApiClient.PyrusClient client)
 		{
 			var response = await client.Auth(
-				"bot_login",
+				"bot_logini",
 				"security_key"
 			);
 

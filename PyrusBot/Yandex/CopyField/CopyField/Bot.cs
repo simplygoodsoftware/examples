@@ -111,15 +111,11 @@ namespace Bots.CopyFieldBot
 				Token = botRequest.AccessToken
 			};
 
-			if (!int.TryParse(botRequest.TaskId, out int taskId))
-				throw new Exception($"Failed to deserialize task id: '{botRequest.TaskId}'.");
-
-			_task = ApiHelper.EnsureSuccess(await _apiClient.GetTask(taskId)).Task;
+			_task = ApiHelper.EnsureSuccess(await _apiClient.GetTask(botRequest.TaskId)).Task;
 			if (_task == null)
 				throw new Exception($"Failed to get task '{botRequest.TaskId}'.");
 
-			if (!int.TryParse(botRequest.UserId, out _botId))
-				throw new Exception($"Failed to deserialize user id {botRequest.UserId}");
+			_botId = botRequest.UserId;
 
 			if (!string.IsNullOrWhiteSpace(botRequest.BotSettings))
 				_settings = JsonSerializer.Deserialize<BotSettings>(botRequest.BotSettings);
@@ -127,7 +123,7 @@ namespace Bots.CopyFieldBot
 			var result = await Execute();
 
 			if (result != null)
-				ApiHelper.EnsureSuccess(await _apiClient.CommentTask(taskId, result));
+				ApiHelper.EnsureSuccess(await _apiClient.CommentTask(botRequest.TaskId, result));
 		}
 
 		/// <summary>

@@ -17,13 +17,13 @@ namespace Bots.CopyFieldBot
 		/// Id of the task from which the bot was invoked.
 		/// </summary>
 		[JsonPropertyName("task_id")]
-		public string TaskId { get; set; }
+		public int TaskId { get; set; }
 
 		/// <summary>
 		/// Id of the bot in Pyrus.
 		/// </summary>
 		[JsonPropertyName("user_id")]
-		public string UserId { get; set; }
+		public int UserId { get; set; }
 
 		/// <summary>
 		/// Content of the 'Settings' field from the bot profile.
